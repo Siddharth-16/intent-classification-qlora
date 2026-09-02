@@ -1,18 +1,18 @@
 {
-  "machine": "arm64",
+  "machine": "x86_64",
   "note": "Regenerate this file inside the final Colab/CUDA runtime before reporting training or inference results.",
   "packages": {
-    "accelerate": null,
-    "bitsandbytes": null,
+    "accelerate": "1.14.0",
+    "bitsandbytes": "0.50.2",
     "datasets": "5.0.1",
-    "peft": null,
+    "peft": "0.20.0",
     "scikit-learn": "1.8.0",
-    "torch": null,
+    "torch": "2.12.1+cu130",
     "transformers": "5.16.1",
-    "trl": null
+    "trl": "1.12.0"
   },
-  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
-  "python": "3.14.5",
-  "python_executable": "/Users/siddharth/Downloads/intent-classification-qlora/venv/bin/python",
+  "platform": "Linux-5.14.0-687.42.1.el9_8.x86_64-x86_64-with-glibc2.34",
+  "python": "3.12.7",
+  "python_executable": "/scratch/sa9884/intent-classification-qlora/.venv/bin/python",
   "python_implementation": "CPython"
 }
