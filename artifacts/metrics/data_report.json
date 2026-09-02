@@ -1,0 +1,139 @@
+{
+  "dataset": "CLINC-OOS Plus",
+  "duplicates": {
+    "cross_split": {
+      "train_test": {
+        "conflicting_label_count": 2,
+        "overlap_count": 2,
+        "record_pairs": [
+          {
+            "left_id": "train-12066",
+            "left_label": "what_is_your_name",
+            "right_id": "test-00938",
+            "right_label": "user_name",
+            "same_label": false
+          },
+          {
+            "left_id": "train-14018",
+            "left_label": "how_old_are_you",
+            "right_id": "test-00599",
+            "right_label": "where_are_you_from",
+            "same_label": false
+          }
+        ],
+        "same_label_count": 0
+      },
+      "train_validation": {
+        "conflicting_label_count": 2,
+        "overlap_count": 3,
+        "record_pairs": [
+          {
+            "left_id": "train-11896",
+            "left_label": "greeting",
+            "right_id": "validation-02369",
+            "right_label": "greeting",
+            "same_label": true
+          },
+          {
+            "left_id": "train-11130",
+            "left_label": "whisper_mode",
+            "right_id": "validation-01794",
+            "right_label": "change_volume",
+            "same_label": false
+          },
+          {
+            "left_id": "train-07424",
+            "left_label": "todo_list",
+            "right_id": "validation-01011",
+            "right_label": "reminder",
+            "same_label": false
+          }
+        ],
+        "same_label_count": 1
+      },
+      "validation_test": {
+        "conflicting_label_count": 0,
+        "overlap_count": 0,
+        "record_pairs": [],
+        "same_label_count": 0
+      }
+    },
+    "within_split": {
+      "test": 0,
+      "train": 0,
+      "validation": 0
+    }
+  },
+  "in_scope_label_count": 150,
+  "label_order": "alphabetical in-scope labels followed by oos",
+  "source": "Hugging Face Hub",
+  "source_config": "plus",
+  "source_dataset": "DeepPavlov/clinc_oos",
+  "source_repository": "https://huggingface.co/datasets/DeepPavlov/clinc_oos",
+  "source_revision": "d76f3a952f3dd39124311cc9db4648d31cbb8774",
+  "split_usage": {
+    "test": "one final frozen evaluation; never tune from results",
+    "train": "fit model parameters",
+    "validation": "prompt, configuration, and checkpoint decisions"
+  },
+  "splits": {
+    "test": {
+      "in_scope_rows": 4500,
+      "oos_fraction": 0.181818,
+      "oos_rows": 1000,
+      "rows": 5500,
+      "text_statistics": {
+        "character_count_max": 125,
+        "character_count_mean": 40.174,
+        "character_count_median": 38.0,
+        "character_count_min": 2,
+        "character_count_p95": 69,
+        "word_count_max": 25,
+        "word_count_mean": 8.292,
+        "word_count_median": 8.0,
+        "word_count_min": 1,
+        "word_count_p95": 14
+      },
+      "unique_labels": 151
+    },
+    "train": {
+      "in_scope_rows": 15000,
+      "oos_fraction": 0.016393,
+      "oos_rows": 250,
+      "rows": 15250,
+      "text_statistics": {
+        "character_count_max": 136,
+        "character_count_mean": 39.882,
+        "character_count_median": 38.0,
+        "character_count_min": 2,
+        "character_count_p95": 67,
+        "word_count_max": 28,
+        "word_count_mean": 8.323,
+        "word_count_median": 8.0,
+        "word_count_min": 1,
+        "word_count_p95": 14
+      },
+      "unique_labels": 151
+    },
+    "validation": {
+      "in_scope_rows": 3000,
+      "oos_fraction": 0.032258,
+      "oos_rows": 100,
+      "rows": 3100,
+      "text_statistics": {
+        "character_count_max": 114,
+        "character_count_mean": 39.708,
+        "character_count_median": 37.0,
+        "character_count_min": 2,
+        "character_count_p95": 70,
+        "word_count_max": 24,
+        "word_count_mean": 8.282,
+        "word_count_median": 8.0,
+        "word_count_min": 1,
+        "word_count_p95": 15
+      },
+      "unique_labels": 151
+    }
+  },
+  "total_label_count": 151
+}

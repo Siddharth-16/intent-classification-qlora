@@ -1,0 +1,18 @@
+{
+  "machine": "arm64",
+  "note": "Regenerate this file inside the final Colab/CUDA runtime before reporting training or inference results.",
+  "packages": {
+    "accelerate": null,
+    "bitsandbytes": null,
+    "datasets": "5.0.1",
+    "peft": null,
+    "scikit-learn": "1.8.0",
+    "torch": null,
+    "transformers": "5.16.1",
+    "trl": null
+  },
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "python": "3.14.5",
+  "python_executable": "/Users/siddharth/Downloads/intent-classification-qlora/venv/bin/python",
+  "python_implementation": "CPython"
+}
