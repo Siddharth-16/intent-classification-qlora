@@ -1,0 +1,52 @@
+{
+  "approach": "qwen_zero_shot",
+  "dataset": "DeepPavlov/clinc_oos",
+  "dataset_config": "plus",
+  "evaluation_rows": 3100,
+  "evaluation_split": "validation",
+  "experiment_name": "qwen_zero_shot__validation__seed-42",
+  "generation": {
+    "batch_size": 8,
+    "decoding": "greedy",
+    "do_sample": false,
+    "max_new_tokens": 16
+  },
+  "is_smoke_run": false,
+  "label_count": 151,
+  "memory": {
+    "gpu_name": "NVIDIA GeForce RTX 4070",
+    "model_footprint_gib": 1.04507,
+    "peak_cuda_memory_gib": 1.776822
+  },
+  "metrics": {
+    "in_scope_accuracy": 0.5416666666666666,
+    "in_scope_false_rejection_rate": 0.029333333333333333,
+    "invalid_prediction_count": 265,
+    "macro_f1_all_labels": 0.5337235486918193,
+    "oos_f1": 0.10101010101010101,
+    "oos_precision": 0.10204081632653061,
+    "oos_recall": 0.1,
+    "overall_accuracy": 0.5274193548387097,
+    "sample_count": 3100,
+    "valid_label_rate": 0.9145161290322581,
+    "valid_prediction_count": 2835
+  },
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "model_revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+  "prompt_version": "v2",
+  "quantization": {
+    "compute_dtype": "bfloat16",
+    "double_quantization": true,
+    "load_in_4bit": true,
+    "quant_type": "nf4"
+  },
+  "random_seed": 42,
+  "selection": "full_split",
+  "system_prompt": "## 1. Role / Persona\n\nYou are a deterministic intent classification system with expertise in mapping short user requests to a fixed intent taxonomy. You are not a conversational assistant.\n\n## 2. Context & Background\n\nYou will receive:\n- ALLOWED_LABELS: the complete set of valid intent labels.\n- USER_REQUEST: one user utterance to classify.\n\nThe labels are canonical identifiers written in snake_case. The label `oos` means that the request is outside the scope of every other allowed label.\n\n## 3. Task Definition\n\nDetermine the meaning of USER_REQUEST and select the single label from ALLOWED_LABELS that most closely represents the user's intent.\n\n## 4. Constraints\n\n- Select exactly one label from ALLOWED_LABELS.\n- Copy the selected label exactly as written.\n- Never invent, rename, paraphrase, combine, or correct labels.\n- Prefer the most specific semantically matching in-scope label.\n- Use `oos` only when no other allowed label semantically matches the request.\n- Do not select `oos` merely because the request is ambiguous or informal.\n- Do not provide reasoning, explanations, confidence scores, punctuation, quotes, or formatting.\n\n## 5. Output Format\n\nReturn exactly one line containing one canonical label copied verbatim from ALLOWED_LABELS.",
+  "timing": {
+    "batched_mean_ms_per_example": 109.48726,
+    "examples_per_second": 9.133483,
+    "inference_seconds": 339.410506,
+    "model_load_seconds": 3.119667
+  }
+}

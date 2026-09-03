@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Collection
 
 MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct"
+MODEL_REVISION = "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
 RANDOM_SEED = 42
 OOS_LABEL = "oos"
 
@@ -43,6 +44,7 @@ def build_evaluation_contract(labels: list[str]) -> dict[str, object]:
 
     return {
         "model_id": MODEL_ID,
+        "model_revision": MODEL_REVISION,
         "random_seed": RANDOM_SEED,
         "development_split": DEVELOPMENT_SPLIT,
         "final_split": FINAL_SPLIT,
