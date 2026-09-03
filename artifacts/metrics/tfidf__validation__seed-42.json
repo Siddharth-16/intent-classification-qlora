@@ -1,0 +1,52 @@
+{
+  "approach": "tfidf",
+  "configuration": {
+    "logistic_regression": {
+      "C": 1.0,
+      "class_weight": null,
+      "effective_penalty": "l2",
+      "l1_ratio": 0.0,
+      "max_iter": 1000,
+      "solver": "lbfgs"
+    },
+    "tfidf": {
+      "analyzer": "word",
+      "lowercase": true,
+      "min_df": 2,
+      "ngram_range": [
+        1,
+        2
+      ],
+      "stop_words": null,
+      "sublinear_tf": true
+    }
+  },
+  "dataset": "DeepPavlov/clinc_oos",
+  "dataset_config": "plus",
+  "evaluation_rows": 3100,
+  "evaluation_split": "validation",
+  "experiment_name": "tfidf__validation__seed-42",
+  "feature_count": 12054,
+  "metrics": {
+    "in_scope_accuracy": 0.8753333333333333,
+    "in_scope_false_rejection_rate": 0.024,
+    "invalid_prediction_count": 0,
+    "macro_f1_all_labels": 0.8759612585458191,
+    "oos_f1": 0.5172413793103449,
+    "oos_precision": 0.45454545454545453,
+    "oos_recall": 0.6,
+    "overall_accuracy": 0.8664516129032258,
+    "sample_count": 3100,
+    "valid_label_rate": 1.0,
+    "valid_prediction_count": 3100
+  },
+  "optimizer_iterations": 35,
+  "random_seed": 42,
+  "timing": {
+    "fit_seconds": 16.860908,
+    "inference_seconds": 0.09674,
+    "mean_inference_ms_per_example": 0.031206
+  },
+  "train_rows": 15250,
+  "train_split": "train"
+}
