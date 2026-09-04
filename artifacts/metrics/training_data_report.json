@@ -1,0 +1,45 @@
+{
+  "format": "conversational_prompt_completion",
+  "label_count": 151,
+  "loss_scope": "completion_only",
+  "maximum_observed_tokens": 973,
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "model_revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+  "prompt_version": "v2",
+  "recommended_max_length": 1024,
+  "train_oos_rows": 250,
+  "train_rows": 15250,
+  "train_token_lengths": {
+    "complete_sequence_tokens": {
+      "max": 973,
+      "mean": 941.385,
+      "median": 941.0,
+      "min": 932,
+      "p95": 949
+    },
+    "prompt_tokens": {
+      "max": 968,
+      "mean": 937.129,
+      "median": 936.0,
+      "min": 929,
+      "p95": 944
+    }
+  },
+  "validation_rows": 3100,
+  "validation_token_lengths": {
+    "complete_sequence_tokens": {
+      "max": 968,
+      "mean": 941.339,
+      "median": 941.0,
+      "min": 932,
+      "p95": 949
+    },
+    "prompt_tokens": {
+      "max": 963,
+      "mean": 937.088,
+      "median": 936.0,
+      "min": 929,
+      "p95": 945
+    }
+  }
+}

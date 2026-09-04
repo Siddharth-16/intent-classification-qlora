@@ -1,5 +1,6 @@
 {
   "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "model_revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
   "random_seed": 42,
   "development_split": "validation",
   "final_split": "test",

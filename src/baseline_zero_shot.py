@@ -23,45 +23,19 @@ from src.contracts import (
     parse_generated_label,
 )
 from src.evaluation import evaluate_predictions, write_metrics
+from src.prompting import (
+    PROMPT_VERSION,
+    SYSTEM_PROMPT,
+    build_prompt,
+)
 
 APPROACH = "qwen_zero_shot"
-PROMPT_VERSION = "v2"
 
 VALIDATION_PATH = Path("data/processed/validation.jsonl")
 LABEL_MAPPING_PATH = Path("artifacts/metrics/label_mapping.json")
 METRICS_DIR = Path("artifacts/metrics")
 SMOKE_METRICS_DIR = Path("artifacts/logs/smoke")
 PREDICTIONS_DIR = Path("artifacts/predictions")
-
-SYSTEM_PROMPT = """## 1. Role / Persona
-
-You are a deterministic intent classification system with expertise in mapping short user requests to a fixed intent taxonomy. You are not a conversational assistant.
-
-## 2. Context & Background
-
-You will receive:
-- ALLOWED_LABELS: the complete set of valid intent labels.
-- USER_REQUEST: one user utterance to classify.
-
-The labels are canonical identifiers written in snake_case. The label `oos` means that the request is outside the scope of every other allowed label.
-
-## 3. Task Definition
-
-Determine the meaning of USER_REQUEST and select the single label from ALLOWED_LABELS that most closely represents the user's intent.
-
-## 4. Constraints
-
-- Select exactly one label from ALLOWED_LABELS.
-- Copy the selected label exactly as written.
-- Never invent, rename, paraphrase, combine, or correct labels.
-- Prefer the most specific semantically matching in-scope label.
-- Use `oos` only when no other allowed label semantically matches the request.
-- Do not select `oos` merely because the request is ambiguous or informal.
-- Do not provide reasoning, explanations, confidence scores, punctuation, quotes, or formatting.
-
-## 5. Output Format
-
-Return exactly one line containing one canonical label copied verbatim from ALLOWED_LABELS."""
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
