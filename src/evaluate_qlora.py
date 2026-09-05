@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
-import random
 import time
 from pathlib import Path
 from typing import Any
 
 import torch
+from peft import PeftConfig, PeftModel
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -15,6 +16,11 @@ from transformers import (
     set_seed,
 )
 
+from src.baseline_zero_shot import (
+    generate_batch,
+    select_records,
+    write_jsonl,
+)
 from src.contracts import (
     DEVELOPMENT_SPLIT,
     FINAL_SPLIT,
@@ -23,121 +29,163 @@ from src.contracts import (
     RANDOM_SEED,
     parse_generated_label,
 )
-from src.evaluation import evaluate_predictions, write_metrics
+from src.evaluation import (
+    evaluate_predictions,
+    write_metrics,
+)
 from src.prompting import (
     PROMPT_VERSION,
     SYSTEM_PROMPT,
     build_prompt,
 )
+from src.training_data import (
+    LABEL_MAPPING_PATH,
+    VALIDATION_PATH,
+    read_jsonl,
+    read_labels,
+)
 from src.frozen_evaluation import (
     load_frozen_evaluation_config,
+    validate_frozen_adapter,
 )
 
-APPROACH = "qwen_zero_shot"
+APPROACH = "qwen_qlora"
 
-VALIDATION_PATH = Path("data/processed/validation.jsonl")
+CONFIG_PATH = Path("configs/qlora.json")
+ADAPTER_PATH = Path(
+    "artifacts/adapters/qwen_qlora__seed-42"
+)
+TRAINING_REPORT_PATH = Path(
+    "artifacts/metrics/qwen_qlora__seed-42.json"
+)
 TEST_PATH = Path("data/processed/test.jsonl")
-LABEL_MAPPING_PATH = Path("artifacts/metrics/label_mapping.json")
 METRICS_DIR = Path("artifacts/metrics")
 SMOKE_METRICS_DIR = Path("artifacts/logs/smoke")
 PREDICTIONS_DIR = Path("artifacts/predictions")
 
 
-def read_jsonl(path: Path) -> list[dict[str, Any]]:
-    """Load a processed JSONL file"""
+def read_json(path: Path) -> dict[str, Any]:
+    """Read a UTF-8 JSON document"""
 
     with path.open("r", encoding="utf-8") as handle:
-        return [
-            json.loads(line)
-            for line in handle
-            if line.strip()
-        ]
+        return json.load(handle)
 
 
-def read_labels(path: Path) -> list[str]:
-    """Load canonical labels in numeric ID order"""
+def sha256_file(path: Path) -> str:
+    """Calculate the SHA-256 digest of one local file"""
 
-    mapping = json.loads(
-        path.read_text(encoding="utf-8")
-    )["label_to_id"]
+    digest = hashlib.sha256()
 
-    return [
-        label
-        for label, _ in sorted(
-            mapping.items(),
-            key=lambda item: item[1],
-        )
-    ]
+    with path.open("rb") as handle:
+        for block in iter(
+            lambda: handle.read(1024 * 1024),
+            b"",
+        ):
+            digest.update(block)
 
-
-def select_records(
-    records: list[dict[str, Any]],
-    limit: int | None,
-) -> list[dict[str, Any]]:
-    """Select a reproducible random subset for smoke testing"""
-
-    if limit is None:
-        return records
-
-    if not 1 <= limit <= len(records):
-        raise ValueError(
-            f"--limit must be between 1 and {len(records)}"
-        )
-
-    generator = random.Random(RANDOM_SEED)
-    indices = sorted(
-        generator.sample(range(len(records)), limit)
-    )
-
-    return [records[index] for index in indices]
+    return digest.hexdigest()
 
 
-def generate_batch(
-    model: Any,
-    tokenizer: Any,
-    prompts: list[str],
-    max_new_tokens: int,
-) -> list[str]:
-    """Generate one batch using deterministic greedy decoding"""
+def directory_size_bytes(path: Path) -> int:
+    """Return the recursive size of a directory"""
 
-    inputs = tokenizer(
-        prompts,
-        add_special_tokens=False,
-        padding=True,
-        return_tensors="pt",
-    ).to(model.device)
-
-    with torch.inference_mode():
-        generated_ids = model.generate(
-            **inputs,
-            do_sample=False,
-            max_new_tokens=max_new_tokens,
-            pad_token_id=tokenizer.pad_token_id,
-            use_cache=True,
-        )
-
-    prompt_width = inputs["input_ids"].shape[1]
-    generated_ids = generated_ids[:, prompt_width:]
-
-    return tokenizer.batch_decode(
-        generated_ids,
-        skip_special_tokens=True,
+    return sum(
+        file.stat().st_size
+        for file in path.rglob("*")
+        if file.is_file()
     )
 
 
-def write_jsonl(
-    path: Path,
-    records: list[dict[str, object]],
-) -> None:
-    """Write local prediction records for error analysis."""
+def validate_adapter(
+    training_config: dict[str, Any],
+) -> dict[str, object]:
+    """Validate adapter and training metadata before evaluation"""
 
-    path.parent.mkdir(parents=True, exist_ok=True)
+    adapter_config_path = (
+        ADAPTER_PATH / "adapter_config.json"
+    )
+    adapter_weights_path = (
+        ADAPTER_PATH / "adapter_model.safetensors"
+    )
 
-    with path.open("w", encoding="utf-8") as handle:
-        for record in records:
-            handle.write(
-                json.dumps(record, ensure_ascii=False) + "\n"
+    required_paths = (
+        ADAPTER_PATH,
+        adapter_config_path,
+        adapter_weights_path,
+        TRAINING_REPORT_PATH,
+    )
+
+    for path in required_paths:
+        if not path.exists():
+            raise FileNotFoundError(
+                f"Required evaluation artifact is missing: {path}"
             )
+
+    peft_config = PeftConfig.from_pretrained(
+        str(ADAPTER_PATH)
+    )
+    training_report = read_json(TRAINING_REPORT_PATH)
+
+    if peft_config.base_model_name_or_path != MODEL_ID:
+        raise ValueError(
+            "Adapter base model mismatch: "
+            f"{peft_config.base_model_name_or_path!r} "
+            f"!= {MODEL_ID!r}"
+        )
+
+    if training_report["model_id"] != MODEL_ID:
+        raise ValueError(
+            "Training report model ID does not match "
+            "the evaluation contract"
+        )
+
+    if (
+        training_report["model_revision"]
+        != MODEL_REVISION
+    ):
+        raise ValueError(
+            "Training report model revision does not match "
+            "the evaluation contract"
+        )
+
+    if (
+        training_report["prompt_version"]
+        != PROMPT_VERSION
+    ):
+        raise ValueError(
+            "Training and evaluation prompt versions differ"
+        )
+
+    if training_report["is_smoke_run"]:
+        raise ValueError(
+            "The selected adapter came from a smoke run"
+        )
+
+    if (
+        training_report["training_config"]
+        != training_config
+    ):
+        raise ValueError(
+            "Current QLoRA configuration differs from "
+            "the recorded training configuration"
+        )
+
+    return {
+        "path": str(ADAPTER_PATH),
+        "weights_file": adapter_weights_path.name,
+        "weights_sha256": sha256_file(
+            adapter_weights_path
+        ),
+        "size_mib": round(
+            directory_size_bytes(ADAPTER_PATH)
+            / (1024**2),
+            6,
+        ),
+        "base_model": (
+            peft_config.base_model_name_or_path
+        ),
+        "task_type": str(peft_config.task_type),
+    }
 
 
 def run(
@@ -146,14 +194,27 @@ def run(
     max_new_tokens: int,
     evaluation_split: str,
 ) -> None:
-    """Run the zero-shot Qwen evaluation"""
+    """Evaluate the trained adapter on the selected split"""
 
     if not torch.cuda.is_available():
         raise RuntimeError(
-            "CUDA is required for this baseline"
+            "CUDA is required for QLoRA evaluation"
+        )
+
+    if batch_size < 1:
+        raise ValueError("--batch-size must be positive")
+
+    if max_new_tokens < 1:
+        raise ValueError(
+            "--max-new-tokens must be positive"
         )
 
     set_seed(RANDOM_SEED)
+
+    training_config = read_json(CONFIG_PATH)
+    adapter_metadata = validate_adapter(
+        training_config
+    )
 
     frozen_config: dict[str, Any] | None = None
 
@@ -166,8 +227,17 @@ def run(
         frozen_config = (
             load_frozen_evaluation_config()
         )
-        generation = frozen_config["generation"]
+        frozen_adapter_dir, _ = (
+            validate_frozen_adapter(frozen_config)
+        )
 
+        if frozen_adapter_dir != ADAPTER_PATH:
+            raise ValueError(
+                "Evaluator adapter path differs from "
+                "the frozen adapter path"
+            )
+
+        generation = frozen_config["generation"]
         batch_size = int(generation["batch_size"])
         max_new_tokens = int(
             generation["max_new_tokens"]
@@ -203,8 +273,12 @@ def run(
     if frozen_config is None:
         quantization = {
             "load_in_4bit": True,
-            "quant_type": "nf4",
-            "double_quantization": True,
+            "quant_type": training_config[
+                "bnb_4bit_quant_type"
+            ],
+            "double_quantization": training_config[
+                "bnb_4bit_use_double_quant"
+            ],
             "compute_dtype": compute_dtype_name,
         }
     else:
@@ -219,6 +293,23 @@ def run(
             raise RuntimeError(
                 "Runtime compute dtype differs from "
                 "the frozen configuration"
+            )
+
+        if (
+            quantization["quant_type"]
+            != training_config[
+                "bnb_4bit_quant_type"
+            ]
+            or quantization[
+                "double_quantization"
+            ]
+            != training_config[
+                "bnb_4bit_use_double_quant"
+            ]
+        ):
+            raise ValueError(
+                "Frozen quantization differs from "
+                "the training configuration"
             )
 
     quantization_config = BitsAndBytesConfig(
@@ -245,13 +336,26 @@ def run(
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    model = AutoModelForCausalLM.from_pretrained(
+    base_model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
         revision=MODEL_REVISION,
-        device_map="auto",
-        dtype=compute_dtype,
         quantization_config=quantization_config,
+        dtype=compute_dtype,
+        device_map={
+            "": torch.cuda.current_device()
+        },
+        low_cpu_mem_usage=True,
     )
+    base_model.config.pad_token_id = (
+        tokenizer.pad_token_id
+    )
+
+    model = PeftModel.from_pretrained(
+        base_model,
+        str(ADAPTER_PATH),
+        is_trainable=False,
+    )
+    model.config.use_cache = True
     model.eval()
 
     model_load_seconds = (
@@ -260,19 +364,19 @@ def run(
 
     prompts = [
         build_prompt(
-            record["text"],
-            labels,
-            tokenizer
+            text=record["text"],
+            labels=labels,
+            tokenizer=tokenizer,
         )
         for record in records
     ]
 
-    # Warm up CUDA before measuring inference
+    # Warm up CUDA before collecting timing and memory.
     generate_batch(
-        model,
-        tokenizer,
-        prompts[:1],
-        max_new_tokens,
+        model=model,
+        tokenizer=tokenizer,
+        prompts=prompts[:1],
+        max_new_tokens=max_new_tokens,
     )
     torch.cuda.synchronize()
     torch.cuda.reset_peak_memory_stats()
@@ -280,17 +384,21 @@ def run(
     raw_outputs: list[str] = []
     inference_started = time.perf_counter()
 
-    for start in range(0, len(prompts), batch_size):
+    for start in range(
+        0,
+        len(prompts),
+        batch_size,
+    ):
         batch_prompts = prompts[
             start : start + batch_size
         ]
 
         raw_outputs.extend(
             generate_batch(
-                model,
-                tokenizer,
-                batch_prompts,
-                max_new_tokens,
+                model=model,
+                tokenizer=tokenizer,
+                prompts=batch_prompts,
+                max_new_tokens=max_new_tokens,
             )
         )
 
@@ -324,16 +432,18 @@ def run(
             )
         )
 
+        reference = record["label"]
         predictions.append(prediction)
 
         prediction_records.append(
             {
                 "id": record["id"],
                 "text": record["text"],
-                "reference": record["label"],
+                "reference": reference,
                 "raw_output": raw_output,
                 "prediction": prediction,
                 "valid_output": valid_output,
+                "correct": prediction == reference,
             }
         )
 
@@ -342,33 +452,33 @@ def run(
     ]
 
     metrics = evaluate_predictions(
-        references,
-        predictions,
-        labels,
+        references=references,
+        predictions=predictions,
+        labels=labels,
     )
 
     base_name = (
         f"{APPROACH}__{evaluation_split}"
         f"__seed-{RANDOM_SEED}"
     )
-
     experiment_name = (
         base_name
         if limit is None
         else f"{base_name}__limit-{limit}"
     )
 
-    metrics_dir = (
+    metrics_directory = (
         METRICS_DIR
         if limit is None
         else SMOKE_METRICS_DIR
     )
-
     metrics_path = (
-        metrics_dir / f"{experiment_name}.json"
+        metrics_directory
+        / f"{experiment_name}.json"
     )
     predictions_path = (
-        PREDICTIONS_DIR / f"{experiment_name}.jsonl"
+        PREDICTIONS_DIR
+        / f"{experiment_name}.jsonl"
     )
 
     write_jsonl(
@@ -379,10 +489,17 @@ def run(
     result: dict[str, object] = {
         "experiment_name": experiment_name,
         "approach": APPROACH,
-        "prompt_version": PROMPT_VERSION,
-        "system_prompt": SYSTEM_PROMPT,
         "model_id": MODEL_ID,
         "model_revision": MODEL_REVISION,
+        "adapter": adapter_metadata,
+        "checkpoint_selection": (
+            "final adapter after one training epoch"
+        ),
+        "training_report": str(
+            TRAINING_REPORT_PATH
+        ),
+        "prompt_version": PROMPT_VERSION,
+        "system_prompt": SYSTEM_PROMPT,
         "dataset": "DeepPavlov/clinc_oos",
         "dataset_config": "plus",
         "evaluation_split": evaluation_split,
@@ -417,12 +534,13 @@ def run(
             ),
             "batched_mean_ms_per_example": round(
                 inference_seconds
-                * 1_000
+                * 1000
                 / len(records),
                 6,
             ),
         },
         "memory": {
+            "gpu_name": torch.cuda.get_device_name(0),
             "model_footprint_gib": round(
                 model.get_memory_footprint()
                 / (1024**3),
@@ -433,7 +551,6 @@ def run(
                 / (1024**3),
                 6,
             ),
-            "gpu_name": torch.cuda.get_device_name(0),
         },
         "metrics": metrics,
     }
@@ -450,17 +567,17 @@ def run(
         )
     )
 
-    invalid_examples = [
+    incorrect_examples = [
         record
         for record in prediction_records
-        if not record["valid_output"]
+        if not record["correct"]
     ][:5]
 
-    if invalid_examples:
-        print("First invalid outputs:")
+    if incorrect_examples:
+        print("First incorrect predictions:")
         print(
             json.dumps(
-                invalid_examples,
+                incorrect_examples,
                 indent=2,
                 ensure_ascii=False,
             )
@@ -472,11 +589,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(
         description=(
-            "Run zero-shot Qwen classification "
+            "Evaluate the trained QLoRA adapter "
             "on a CLINC-OOS evaluation split."
         )
     )
-
     parser.add_argument(
         "--split",
         choices=(
@@ -505,7 +621,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    """Run the command-line program"""
+    """Run the command-line evaluator"""
 
     args = build_parser().parse_args()
 

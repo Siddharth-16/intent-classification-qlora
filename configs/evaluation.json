@@ -1,0 +1,43 @@
+{
+    "dataset": {
+        "id": "DeepPavlov/clinc_oos",
+        "config": "plus",
+        "revision": "d76f3a952f3dd39124311cc9db4648d31cbb8774"
+    },
+    "model": {
+        "id": "Qwen/Qwen2.5-1.5B-Instruct",
+        "revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306"
+    },
+    "adapter": {
+        "path": "artifacts/adapters/qwen_qlora__seed-42",
+        "weights_file": "adapter_model.safetensors",
+        "weights_sha256": "bc8346807389eb5f019f1e492a228409d89e439ec7c4e2dd077887eb779c4923"
+    },
+    "checkpoint_selection": {
+        "method": "single_final_adapter_after_one_epoch",
+        "validation_artifact": "artifacts/metrics/qwen_qlora__validation__seed-42.json",
+        "additional_training_runs": 0
+    },
+    "prompt_version": "v2",
+    "random_seed": 42,
+    "quantization": {
+        "load_in_4bit": true,
+        "quant_type": "nf4",
+        "double_quantization": true,
+        "compute_dtype": "bfloat16"
+    },
+    "generation": {
+        "decoding": "greedy",
+        "do_sample": false,
+        "batch_size": 8,
+        "max_new_tokens": 16
+    },
+    "output_contract": {
+        "expected": "exactly one canonical label",
+        "normalization": "surrounding whitespace only",
+        "invalid_output_policy": "count as incorrect"
+    },
+    "development_split": "validation",
+    "final_split": "test",
+    "configuration_frozen": true
+}

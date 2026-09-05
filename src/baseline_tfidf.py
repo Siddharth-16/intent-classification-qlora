@@ -10,7 +10,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 
-from src.contracts import DEVELOPMENT_SPLIT, RANDOM_SEED
+from src.contracts import (
+    DEVELOPMENT_SPLIT,
+    FINAL_SPLIT,
+    RANDOM_SEED,
+)
 from src.evaluation import evaluate_predictions, write_metrics
 
 APPROACH = "tfidf"
@@ -113,25 +117,26 @@ def run_baseline(
     processed_dir: Path,
     label_mapping_path: Path,
     metrics_dir: Path,
+    evaluation_split: str = DEVELOPMENT_SPLIT,
 ) -> Path:
-    """Fit on train, evaluate on validation, and save the result"""
+    """Fit on train, evaluate on the selected split, and save results"""
 
     train_records = read_jsonl(
         processed_dir / "train.jsonl"
     )
-    validation_records = read_jsonl(
-        processed_dir / f"{DEVELOPMENT_SPLIT}.jsonl"
+    evaluation_records = read_jsonl(
+        processed_dir / f"{evaluation_split}.jsonl"
     )
     labels = read_labels(label_mapping_path)
 
     train_texts = [record["text"] for record in train_records]
     train_labels = [record["label"] for record in train_records]
 
-    validation_texts = [
-        record["text"] for record in validation_records
+    evaluation_texts = [
+        record["text"] for record in evaluation_records
     ]
-    validation_labels = [
-        record["label"] for record in validation_records
+    evaluation_labels = [
+        record["label"] for record in evaluation_records
     ]
 
     model = build_model()
@@ -141,11 +146,15 @@ def run_baseline(
     fit_seconds = time.perf_counter() - fit_started
 
     inference_started = time.perf_counter()
-    predictions = model.predict(validation_texts).tolist()
-    inference_seconds = time.perf_counter() - inference_started
+    predictions = model.predict(
+        evaluation_texts
+    ).tolist()
+    inference_seconds = (
+        time.perf_counter() - inference_started
+    )
 
     metrics = evaluate_predictions(
-        references=validation_labels,
+        references=evaluation_labels,
         predictions=predictions,
         labels=labels,
     )
@@ -154,7 +163,8 @@ def run_baseline(
     classifier = model.named_steps["classifier"]
 
     experiment_name = (
-        f"{APPROACH}__{DEVELOPMENT_SPLIT}__seed-{RANDOM_SEED}"
+        f"{APPROACH}__{evaluation_split}"
+        f"__seed-{RANDOM_SEED}"
     )
 
     result: dict[str, object] = {
@@ -163,10 +173,10 @@ def run_baseline(
         "dataset": "DeepPavlov/clinc_oos",
         "dataset_config": "plus",
         "train_split": "train",
-        "evaluation_split": DEVELOPMENT_SPLIT,
+        "evaluation_split": evaluation_split,
         "random_seed": RANDOM_SEED,
         "train_rows": len(train_records),
-        "evaluation_rows": len(validation_records),
+        "evaluation_rows": len(evaluation_records),
         "feature_count": len(
             vectorizer.get_feature_names_out()
         ),
@@ -196,7 +206,7 @@ def run_baseline(
             "mean_inference_ms_per_example": round(
                 inference_seconds
                 * 1_000
-                / len(validation_records),
+                / len(evaluation_records),
                 6,
             ),
         },
@@ -221,13 +231,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Run TF-IDF + logistic regression "
-            "on CLINC-OOS validation."
+            "on CLINC-OOS evaluation split."
         )
     )
     parser.add_argument(
         "--processed-dir",
         type=Path,
         default=Path("data/processed"),
+    )
+    parser.add_argument(
+        "--split",
+        choices=(
+            DEVELOPMENT_SPLIT,
+            FINAL_SPLIT,
+        ),
+        default=DEVELOPMENT_SPLIT,
     )
     parser.add_argument(
         "--label-mapping",
@@ -253,6 +271,7 @@ def main() -> None:
         processed_dir=args.processed_dir,
         label_mapping_path=args.label_mapping,
         metrics_dir=args.metrics_dir,
+        evaluation_split=args.split,
     )
 
 
