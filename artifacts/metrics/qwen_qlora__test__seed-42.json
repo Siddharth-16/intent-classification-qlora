@@ -1,0 +1,62 @@
+{
+  "adapter": {
+    "base_model": "Qwen/Qwen2.5-1.5B-Instruct",
+    "path": "artifacts/adapters/qwen_qlora__seed-42",
+    "size_mib": 35.274728,
+    "task_type": "CAUSAL_LM",
+    "weights_file": "adapter_model.safetensors",
+    "weights_sha256": "bc8346807389eb5f019f1e492a228409d89e439ec7c4e2dd077887eb779c4923"
+  },
+  "approach": "qwen_qlora",
+  "checkpoint_selection": "final adapter after one training epoch",
+  "dataset": "DeepPavlov/clinc_oos",
+  "dataset_config": "plus",
+  "evaluation_rows": 5500,
+  "evaluation_split": "test",
+  "experiment_name": "qwen_qlora__test__seed-42",
+  "generation": {
+    "batch_size": 8,
+    "decoding": "greedy",
+    "do_sample": false,
+    "max_new_tokens": 16
+  },
+  "is_smoke_run": false,
+  "label_count": 151,
+  "memory": {
+    "gpu_name": "NVIDIA GeForce RTX 4070",
+    "model_footprint_gib": 1.113857,
+    "peak_cuda_memory_gib": 2.268075
+  },
+  "metrics": {
+    "in_scope_accuracy": 0.9706666666666667,
+    "in_scope_false_rejection_rate": 0.0017777777777777779,
+    "invalid_prediction_count": 43,
+    "macro_f1_all_labels": 0.9430397459865097,
+    "oos_f1": 0.7992852888624181,
+    "oos_precision": 0.9882179675994109,
+    "oos_recall": 0.671,
+    "overall_accuracy": 0.9161818181818182,
+    "sample_count": 5500,
+    "valid_label_rate": 0.9921818181818182,
+    "valid_prediction_count": 5457
+  },
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "model_revision": "989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+  "prompt_version": "v2",
+  "quantization": {
+    "compute_dtype": "bfloat16",
+    "double_quantization": true,
+    "load_in_4bit": true,
+    "quant_type": "nf4"
+  },
+  "random_seed": 42,
+  "selection": "full_split",
+  "system_prompt": "## 1. Role / Persona\n\nYou are a deterministic intent classification system with expertise in mapping short user requests to a fixed intent taxonomy. You are not a conversational assistant.\n\n## 2. Context & Background\n\nYou will receive:\n- ALLOWED_LABELS: the complete set of valid intent labels.\n- USER_REQUEST: one user utterance to classify.\n\nThe labels are canonical identifiers written in snake_case. The label `oos` means that the request is outside the scope of every other allowed label.\n\n## 3. Task Definition\n\nDetermine the meaning of USER_REQUEST and select the single label from ALLOWED_LABELS that most closely represents the user's intent.\n\n## 4. Constraints\n\n- Select exactly one label from ALLOWED_LABELS.\n- Copy the selected label exactly as written.\n- Never invent, rename, paraphrase, combine, or correct labels.\n- Prefer the most specific semantically matching in-scope label.\n- Use `oos` only when no other allowed label semantically matches the request.\n- Do not select `oos` merely because the request is ambiguous or informal.\n- Do not provide reasoning, explanations, confidence scores, punctuation, quotes, or formatting.\n\n## 5. Output Format\n\nReturn exactly one line containing one canonical label copied verbatim from ALLOWED_LABELS.",
+  "timing": {
+    "batched_mean_ms_per_example": 161.179245,
+    "examples_per_second": 6.204273,
+    "inference_seconds": 886.485849,
+    "model_load_seconds": 3.727704
+  },
+  "training_report": "artifacts/metrics/qwen_qlora__seed-42.json"
+}
