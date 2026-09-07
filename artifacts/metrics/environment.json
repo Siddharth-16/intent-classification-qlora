@@ -13,6 +13,5 @@
   },
   "platform": "Linux-5.14.0-687.42.1.el9_8.x86_64-x86_64-with-glibc2.34",
   "python": "3.12.7",
-  "python_executable": "/scratch/sa9884/intent-classification-qlora/.venv/bin/python",
   "python_implementation": "CPython"
 }

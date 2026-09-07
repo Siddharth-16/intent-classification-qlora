@@ -4,7 +4,6 @@ import argparse
 import json
 import platform
 import statistics
-import sys
 from collections import Counter
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -304,7 +303,6 @@ def build_environment_report() -> dict[str, object]:
     return {
         "python": platform.python_version(),
         "python_implementation": platform.python_implementation(),
-        "python_executable": sys.executable,
         "platform": platform.platform(),
         "machine": platform.machine(),
         "packages": packages,
